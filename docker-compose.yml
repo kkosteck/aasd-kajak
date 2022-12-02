@@ -1,0 +1,4 @@
+prosody:
+  build: "./prosody"
+  ports:
+    - "5222:5222"
