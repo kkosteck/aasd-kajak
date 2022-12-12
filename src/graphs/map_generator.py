@@ -3,13 +3,15 @@ import random
 import networkx as nx
 import numpy as np
 import matplotlib.pyplot as plt
-import numpy as np
+
+from src.graphs.intersection import Intersection
 
 
 class MapGenerator:
 
-    def __init__(self, intersections=10, width=10, height=10):
-        self.intersections = intersections
+    def __init__(self, inters_count=10, width=10, height=10):
+        self.inters_count = inters_count
+        self.intersections = {}
         self.width = width
         self.height = height
         self.grid = np.zeros([width, height], dtype=int)
@@ -26,19 +28,31 @@ class MapGenerator:
                 continue
             elif not node_1:
                 node_1 = node_2
-                # print(node_1, grid_iter.multi_index)
                 continue
             else:
-                # print(node_2, grid_iter.multi_index)
-                for lane in range(1, random.randint(1, 4) + 1):
-                    self.graph.add_edge(node_1, node_2, weight=random.randint(1, 10), lane=lane)
-                for lane in range(1, random.randint(1, 4) + 1):
-                    self.graph.add_edge(node_2, node_1, weight=random.randint(1, 10), lane=lane)
+                # lanes = random.randint(1, 2)
+                lanes = 2
+                for lane in range(1, lanes + 1):
+                    self.graph.add_edge(node_1, node_2, weight=random.randint(1, 10),
+                                        lane=lane, direction="W" if axis else "S")
+                # lanes = random.randint(1, 2)
+                for lane in range(1, lanes + 1):
+                    self.graph.add_edge(node_2, node_1, weight=random.randint(1, 10),
+                                        lane=lane, direction="E" if axis else "N")
                 node_1 = node_2
+
+    def _generate_intersections_graphs(self):
+        for node in self.graph.nodes(data=True):
+            edges = []
+            for _, _, data in self.graph.in_edges(node[0], data=True):
+                edges.append(f"{data['direction']}{data['lane']}_IN")
+            for _, _, data in self.graph.out_edges(node[0], data=True):
+                edges.append(f"{data['direction']}{data['lane']}_OUT")
+            self.intersections[node[0]] = Intersection(node[0], edges)
 
     def generate(self):
         # position nodes on the grid
-        positions = sorted(random.sample(list(np.ndindex(self.grid.shape)), self.intersections))
+        positions = sorted(random.sample(list(np.ndindex(self.grid.shape)), self.inters_count))
         for idx, (x, y) in enumerate(positions, start=1):
             self.grid[x, y] = idx
             self.graph.add_node(idx, x_cord=x, y_cord=y)
@@ -47,6 +61,8 @@ class MapGenerator:
         self._create_edges(1)
         # add vertical edges
         self._create_edges(0)
+        # generate intersection nested graphs
+        self._generate_intersections_graphs()
 
     def visualize(self):
         """
