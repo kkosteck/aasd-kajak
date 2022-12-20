@@ -3,7 +3,6 @@ import asyncio
 from spade.agent import Agent
 from spade.behaviour import CyclicBehaviour
 
-from src.communication.count_awaiting_cars import RequestCountCars, ResponseCountCarsTemplate
 
 
 class TrafficInfoAggregator(Agent):
@@ -20,7 +19,7 @@ class TrafficInfoAggregator(Agent):
             self.sent_messages = 0
 
         async def run(self):
-            await self.send(RequestCountCars("waiting_handler@localhost"))
+            # await self.send(RequestCountCars("waiting_handler@localhost"))
             cars_count = await self.receive()
             print("counted cars: ", cars_count)
             await asyncio.sleep(3)
@@ -32,4 +31,4 @@ class TrafficInfoAggregator(Agent):
     async def setup(self):
         print("TrafficInfoAggregator started")
         aggregate_lines = self.AggregateLines()
-        self.add_behaviour(aggregate_lines, ResponseCountCarsTemplate())
+        # self.add_behaviour(aggregate_lines, ResponseCountCarsTemplate())
