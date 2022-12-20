@@ -11,7 +11,6 @@ from src.communication.count_awaiting_cars import ResponseCountCarsTemplate
 from src.entity.car import Car, Direction
 
 
-# TODO: random frequency with normal distribution along time axis -> traffic grows then decreases
 class LoadGenerator(Agent):
     """
     Agent generating cars with defined intervals on input to crossroads.
