@@ -9,7 +9,7 @@ if __name__ == "__main__":
     crossroad = CrossroadHandler("crossroad_handler@localhost", "pwd", 1)
     future = crossroad.start()
     future.result()  # wait for receiver agent to be prepared.
-    load_generator = LoadGenerator("load_generator@localhost", "pwd", 1, [1])
+    load_generator = LoadGenerator("load_generator@localhost", "pwd", 1, 4, [1])
     load_generator_future = load_generator.start()
     # waiting_handler = WaitingHandler("waiting_handler@localhost", "pwd")
     # sender_future = waiting_handler.start()
