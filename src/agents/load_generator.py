@@ -1,12 +1,13 @@
 import asyncio
 import random
+import time
 from typing import List
 
 from spade.agent import Agent
 from spade.behaviour import CyclicBehaviour
 from spade.message import Message
 
-from src.communication.count_awaiting_cars import ResponseCountCarsTemplate
+from src.communication.move_car_protocol import MoveCarMessage
 from src.entity.car import Car, Direction
 
 
@@ -29,12 +30,14 @@ class LoadGenerator(Agent):
         generated_cars: int
 
         def generate_car(self) -> Car:
-            path = [Direction.NONE, random.choice(Direction.as_list())]
+            # path = [Direction.NONE, random.choice(Direction.as_list())]
+            path = [Direction.NONE, Direction.E, Direction.E]
             self.generated_cars += 1
             return Car(
                 id=self.generated_cars,
-                starting_crossroad_id=random.choice(self.agent.get("available_crossroads_ids")),
-                starting_queue_direction=random.choice(Direction.as_list()),
+                starting_crossroad_id=1,
+                starting_queue_direction=Direction.W,  # random.choice(Direction.as_list()),
+                create_timestamp=time.time(),
                 path=path
             )
 
@@ -43,9 +46,8 @@ class LoadGenerator(Agent):
 
         async def run(self):
             print('sent car')
-            await self.send(Message(to="crossroad_handler@localhost", metadata={"context": "incoming_car"},
-                                    body=self.generate_car().to_json()))
-            await asyncio.sleep(3)
+            await self.send(MoveCarMessage(to="crossroad00@localhost", car=self.generate_car()))
+            await asyncio.sleep(15)
 
     async def setup(self):
         print(f"{self.__class__.__name__} started")
@@ -53,4 +55,4 @@ class LoadGenerator(Agent):
         self.set("available_crossroads_ids", self.available_crossroads_ids)
 
         generate_car = self.GenerateCar()
-        self.add_behaviour(generate_car, ResponseCountCarsTemplate())
+        self.add_behaviour(generate_car)
