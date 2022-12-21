@@ -31,7 +31,7 @@ class TrafficInfoAggregator(Agent):
 
     class Alive(CyclicBehaviour):
         async def run(self):
-            print(f"I'm alive : {self.agent.jid}")
+            print(f"ALIVE : {self.agent.jid}")
             await asyncio.sleep(3)
 
     class ProcessCrossroadsInfo(CyclicBehaviour):
@@ -40,7 +40,10 @@ class TrafficInfoAggregator(Agent):
             if msg:
                 msg_body = json.loads(msg.body)
                 line_queues, current_state = msg_body['line_queues'], msg_body['current_state']
-                print(f'{self.agent.jid}: received info from {msg.sender}!')
+                print(f'CROSSROADS INFO: {self.agent.jid}: received info from {msg.sender}!')
+                # print(line_queues)
+                # print(current_state)
+                # print('#'*40)
 
 
     async def setup(self):

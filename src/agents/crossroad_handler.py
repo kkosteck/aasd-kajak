@@ -91,7 +91,7 @@ class CrossroadHandler(Agent):
             if car_to_move:
                 direction = car_to_move.path[0]
                 print(
-                    f'{self.agent.jid}: sending car {car_to_move} to {connected_crossroads[direction]}')
+                    f'MOVECAR: {self.agent.jid}: sending car {car_to_move} to {connected_crossroads[direction]}')
                 await asyncio.sleep(1)
                 await self.send(MoveCarMessage(
                     to=connected_crossroads[direction],
@@ -134,7 +134,7 @@ class CrossroadHandler(Agent):
             msg = await self.receive(10)
             if msg:
                 car, direction = self.process_car(Car.from_json(msg.body))
-                print(f'{self.agent.jid}: received car {car} from {msg.sender}')
+                print(f'MOVECAR: {self.agent.jid}: received car {car} from {msg.sender}')
 
                 selected_queue_line = self.agent.get('line_queues')
                 selected_queue_line[direction].append(car)
@@ -142,11 +142,12 @@ class CrossroadHandler(Agent):
 
     class SendWaitingInfo(CyclicBehaviour):
         async def run(self):
-
+            await asyncio.sleep(1)
             await self.send(CrossroadsInfoMessage(to=self.agent.get('_aggregator_jid'),
                                                   line_queues=self.agent.get('line_queues'),
                                                   current_state=self.agent.get('lights_state')))
-            print('Sent crossroads info')
+            print(
+                f'CROSSROADS INFO: {self.agent.jid}: sending  to {self.agent.get("_aggregator_jid")}')
             await asyncio.sleep(self.agent.get('update_status_time'))
 
     class CreateAggregator(OneShotBehaviour):

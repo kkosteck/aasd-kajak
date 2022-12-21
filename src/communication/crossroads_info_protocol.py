@@ -16,9 +16,14 @@ class CrossroadsInfoMessage(Message):
         super().__init__(to=to,
                          metadata=METADATA,
                          body=json.dumps({
-                            'line_queues': line_queues,
+                            'line_queues': {line: self._serialize_list(list_of_cars)
+                                            for line, list_of_cars in line_queues.items()},
                             'current_state': current_state
                          }))
+
+    @staticmethod
+    def _serialize_list(l: List):
+        return [e.__dict__ for e in l]
 
 
 class CrossroadsInfoTemplate(Template):
