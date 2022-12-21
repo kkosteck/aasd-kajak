@@ -1,5 +1,5 @@
 import asyncio
-from argparse import Namespace
+import json
 from typing import Dict, List, Optional, Tuple
 
 from spade.agent import Agent
@@ -7,14 +7,10 @@ from spade.behaviour import CyclicBehaviour, OneShotBehaviour
 
 from src.communication.move_car_protocol import MoveCarMessage, MoveCarTemplate
 from src.communication.crossroads_info_protocol import CrossroadsInfoTemplate, CrossroadsInfoMessage
+from src.communication.state_recommendation_protocol import StateRecommendationTemplate
+from src.entity.LightState import LightState
 from src.entity.car import Car, Direction
 from src.agents.traffic_info_aggregator import TrafficInfoAggregator
-
-
-LightState = Namespace(
-    NS='NS',
-    EW='EW'
-)
 
 
 
@@ -58,7 +54,6 @@ class CrossroadHandler(Agent):
         self.update_status_time = update_status_time
         assert '@' in jid
         self._aggregator_jid = f'{jid.split("@")[0]}_aggr@{jid.split("@")[1]}'
-
 
     class MoveCars(CyclicBehaviour):
 
@@ -158,6 +153,16 @@ class CrossroadHandler(Agent):
             aggr_agent = TrafficInfoAggregator(self.agent.get("_aggregator_jid"), "pwd")
             await aggr_agent.start(auto_register=True)
 
+    class ProcessRecommendedStateInfo(CyclicBehaviour):
+        # TODO
+        async def run(self):
+            msg = await self.receive(20)
+            if msg:
+                msg_body = json.loads(msg.body)
+                print(
+                    f'RECOMMEDATION: {self.agent.jid}: received info from {msg.sender}! Recommended state: {msg_body["state"]}')
+                self.agent.set('lights_state', msg_body["state"]) # TODO replace this with some update function
+
     async def setup(self):
         self.set("crossroad_id", self.crossroad_id)
         self.set("lights_state", self.lights_state)
@@ -178,3 +183,5 @@ class CrossroadHandler(Agent):
         self.add_behaviour(process_arriving_cars, MoveCarTemplate())
         send_waiting_info = self.SendWaitingInfo()
         self.add_behaviour(send_waiting_info)
+        process_state_info = self.ProcessRecommendedStateInfo()
+        self.add_behaviour(process_state_info, StateRecommendationTemplate())

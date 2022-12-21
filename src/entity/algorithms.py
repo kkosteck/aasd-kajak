@@ -52,16 +52,16 @@ class SimpleAlgorithm(Algorithm):
             return LightState.EW
 
 
-if __name__ == '__main__':
-    lines = {'N': [], 'S': [], 'W': [], 'E': []}
-    current_state = 'NS'
-    sa = SimpleAlgorithm(timeout=10)
-    print(sa._high_priority_states)
-    time.sleep(5)
-    print(f'recommended: {sa.recommend_state(lines=lines)}')
-    print(sa._high_priority_states)
-    time.sleep(5)
-    print(sa._high_priority_states)
-    time.sleep(5)
-    print(f'recommended: {sa.recommend_state(lines=lines)}')
-    print(sa._high_priority_states)
+# if __name__ == '__main__':
+#     lines = {'N': [], 'S': [], 'W': [], 'E': []}
+#     current_state = 'NS'
+#     sa = SimpleAlgorithm(timeout=10)
+#     print(sa._high_priority_states)
+#     time.sleep(5)
+#     print(f'recommended: {sa.recommend_state(lines=lines)}')
+#     print(sa._high_priority_states)
+#     time.sleep(5)
+#     print(sa._high_priority_states)
+#     time.sleep(5)
+#     print(f'recommended: {sa.recommend_state(lines=lines)}')
+#     print(sa._high_priority_states)
