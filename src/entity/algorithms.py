@@ -1,3 +1,4 @@
+import time
 from abc import ABC, abstractmethod
 import threading
 
@@ -18,7 +19,13 @@ class Algorithm(ABC):
             t.start()
 
     def recommend_state(self, **kwargs):
+        if 'current_state' in kwargs:
+            if kwargs['current_state'] in self._high_priority_states:
+                self._high_priority_states.remove(kwargs['current_state'])
+            self._reset_timer(kwargs['current_state'])
+
         best_state = self._process_data(**kwargs)
+
         if best_state in self._high_priority_states:
             self._high_priority_states.remove(best_state)
         self._reset_timer(best_state)
@@ -36,11 +43,25 @@ class Algorithm(ABC):
 
 
 class SimpleAlgorithm(Algorithm):
-    def _process_data(self, lines):
+    def _process_data(self, lines, current_state):
         if self._high_priority_states:
             return self._high_priority_states[0]
-        elif (len(lines['N']) + len(lines['S'])) >= (len(lines['E']) + len(lines['W'])) :
+        elif (len(lines['N']) + len(lines['S'])) >= (len(lines['E']) + len(lines['W'])):
             return LightState.NS
         else:
             return LightState.EW
 
+
+if __name__ == '__main__':
+    lines = {'N': [], 'S': [], 'W': [], 'E': []}
+    current_state = 'NS'
+    sa = SimpleAlgorithm(timeout=10)
+    print(sa._high_priority_states)
+    time.sleep(5)
+    print(f'recommended: {sa.recommend_state(lines=lines)}')
+    print(sa._high_priority_states)
+    time.sleep(5)
+    print(sa._high_priority_states)
+    time.sleep(5)
+    print(f'recommended: {sa.recommend_state(lines=lines)}')
+    print(sa._high_priority_states)
