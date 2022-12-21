@@ -68,5 +68,5 @@ class TrafficInfoAggregator(Agent):
         process_crossroads_info = self.ProcessCrossroadsInfo()
         self.add_behaviour(process_crossroads_info, CrossroadsInfoTemplate())
 
-        alive = self.Alive()
-        self.add_behaviour(alive)
+        # alive = self.Alive()
+        # self.add_behaviour(alive)
