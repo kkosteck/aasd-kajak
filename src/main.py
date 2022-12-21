@@ -30,8 +30,8 @@ if __name__ == "__main__":
     load_generator = LoadGenerator(Jid.LOAD_GENERATOR, "pwd", 1, 5, [1, 2])
     load_generator_future = load_generator.start().result()
 
-    # while load_generator.is_alive():
-    while True:
+    while load_generator.is_alive():
+    # while True:
         try:
             time.sleep(1)
         except KeyboardInterrupt:
