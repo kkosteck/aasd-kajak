@@ -2,10 +2,12 @@ import asyncio
 from typing import Dict, List, Optional, Tuple
 
 from spade.agent import Agent
-from spade.behaviour import CyclicBehaviour
+from spade.behaviour import CyclicBehaviour, OneShotBehaviour
 
 from src.communication.move_car_protocol import MoveCarMessage, MoveCarTemplate
+from src.communication.crossroads_info_protocol import CrossroadsInfoTemplate, CrossroadsInfoMessage
 from src.entity.car import Car, Direction
+from src.agents.traffic_info_aggregator import TrafficInfoAggregator
 
 
 class LightState:
@@ -27,28 +29,33 @@ class CrossroadHandler(Agent):
     Moves cars from opened queues to next crossroad based on Car.path field one at the time.
     Processes arriving cars by updating queues.
     """
-    lights_state: str = LightState.EW
-    line_queues: Dict[str, List[Car]] = {
-        Direction.N: [],
-        Direction.S: [],
-        Direction.E: [],
-        Direction.W: [],
-    }
-    connected_crossroads: Dict[str, str]
-    crossroad_id: int
 
-    def __init__(self, jid: str, password: str, crossroad_id: int, n_crossroad_jid: Optional[str] = None,
+    def __init__(self, jid: str, password: str,
+                 crossroad_id: int,
+                 update_status_time: Optional[float] = 2.0,
+                 n_crossroad_jid: Optional[str] = None,
                  s_crossroad_jid: Optional[str] = None,
-                 e_crossroad_jid: Optional[str] = None, w_crossroad_jid: Optional[str] = None):
+                 e_crossroad_jid: Optional[str] = None,
+                 w_crossroad_jid: Optional[str] = None):
         super().__init__(jid=jid, password=password)
         self.crossroad_id = crossroad_id
-
-        self.connected_crossroads = {
+        self.lights_state: str = LightState.EW
+        self.connected_crossroads: Dict[str, str] = {
             Direction.N: n_crossroad_jid,
             Direction.S: s_crossroad_jid,
             Direction.E: e_crossroad_jid,
             Direction.W: w_crossroad_jid,
         }
+        self.line_queues: Dict[str, List[Car]] = {
+            Direction.N: [],
+            Direction.S: [],
+            Direction.E: [],
+            Direction.W: [],
+        }
+        self.update_status_time = update_status_time
+        assert '@' in jid
+        self._aggregator_jid = f'{jid.split("@")[0]}_aggr@{jid.split("@")[1]}'
+
 
     class MoveCars(CyclicBehaviour):
 
@@ -133,14 +140,37 @@ class CrossroadHandler(Agent):
                 selected_queue_line[direction].append(car)
                 self.agent.set("line_queues", selected_queue_line)
 
+    class SendWaitingInfo(CyclicBehaviour):
+        async def run(self):
+
+            await self.send(CrossroadsInfoMessage(to=self.agent.get('_aggregator_jid'),
+                                                  line_queues=self.agent.get('line_queues'),
+                                                  current_state=self.agent.get('lights_state')))
+            print('Sent crossroads info')
+            await asyncio.sleep(self.agent.get('update_status_time'))
+
+    class CreateAggregator(OneShotBehaviour):
+        async def run(self):
+            aggr_agent = TrafficInfoAggregator(self.agent.get("_aggregator_jid"), "pwd")
+            await aggr_agent.start(auto_register=True)
+
     async def setup(self):
         self.set("crossroad_id", self.crossroad_id)
         self.set("light_state", self.lights_state)
         self.set("line_queues", self.line_queues)
         self.set("connected_crossroads", self.connected_crossroads)
+        self.set("update_status_time", self.update_status_time)
+        self.set("_aggregator_jid", self._aggregator_jid)
 
+        create_aggr = self.CreateAggregator()
+        self.add_behaviour(create_aggr)
+        # create_aggr.join()
+
+        print('Created Aggregator agent: ', self._aggregator_jid)
 
         move_cars = self.MoveCars()
         self.add_behaviour(move_cars)
         process_arriving_cars = self.ProcessArrivingCars()
         self.add_behaviour(process_arriving_cars, MoveCarTemplate())
+        send_waiting_info = self.SendWaitingInfo()
+        self.add_behaviour(send_waiting_info)
