@@ -6,11 +6,14 @@ from spade.behaviour import CyclicBehaviour
 
 from src.communication.crossroads_info_protocol import CrossroadsInfoTemplate
 
+
 class TrafficInfoAggregator(Agent):
     """
     Agent requesting number of awaiting cars from WaitingHandler.
     Based on number of awaiting cars, chooses state of the traffic lights and sends change request to Crossroad
     """
+
+
 
     class AggregateLines(CyclicBehaviour):
         sent_messages: int
@@ -35,15 +38,15 @@ class TrafficInfoAggregator(Agent):
             await asyncio.sleep(3)
 
     class ProcessCrossroadsInfo(CyclicBehaviour):
+
         async def run(self):
             msg = await self.receive(20)
             if msg:
                 msg_body = json.loads(msg.body)
                 line_queues, current_state = msg_body['line_queues'], msg_body['current_state']
                 print(f'CROSSROADS INFO: {self.agent.jid}: received info from {msg.sender}!')
-                # print(line_queues)
-                # print(current_state)
-                # print('#'*40)
+
+
 
 
     async def setup(self):

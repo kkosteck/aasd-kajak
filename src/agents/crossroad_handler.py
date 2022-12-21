@@ -1,4 +1,5 @@
 import asyncio
+from argparse import Namespace
 from typing import Dict, List, Optional, Tuple
 
 from spade.agent import Agent
@@ -10,9 +11,11 @@ from src.entity.car import Car, Direction
 from src.agents.traffic_info_aggregator import TrafficInfoAggregator
 
 
-class LightState:
-    NS = 'NS'
-    EW = 'EW'
+LightState = Namespace(
+    NS='NS',
+    EW='EW'
+)
+
 
 
 class CrossroadHandler(Agent):
@@ -157,7 +160,7 @@ class CrossroadHandler(Agent):
 
     async def setup(self):
         self.set("crossroad_id", self.crossroad_id)
-        self.set("light_state", self.lights_state)
+        self.set("lights_state", self.lights_state)
         self.set("line_queues", self.line_queues)
         self.set("connected_crossroads", self.connected_crossroads)
         self.set("update_status_time", self.update_status_time)
