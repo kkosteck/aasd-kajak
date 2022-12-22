@@ -1,6 +1,6 @@
 import asyncio
 import json
-from typing import Dict, List, Optional, Tuple, Deque
+from typing import Dict, Set, Optional, Tuple, Deque
 from collections import deque
 
 from spade.agent import Agent
@@ -39,6 +39,7 @@ class CrossroadHandler(Agent):
         super().__init__(jid=jid, password=password)
         self.crossroad_id = crossroad_id
         self.lights_state: str = LightState.EW
+        self.state_scheme: Dict[str, Set[str]] = {}
         self.connected_crossroads: Dict[str, str] = {
             Direction.N: n_crossroad_jid,
             Direction.S: s_crossroad_jid,
@@ -67,47 +68,42 @@ class CrossroadHandler(Agent):
             """
             Move one car from open queue, one at the time
             """
-            # self.print_queue_state()
-            lights_state = self.agent.get('lights_state')
+            self.print_queue_state()
+            # lights_state = self.agent.get('lights_state')
             line_queues = self.agent.get('line_queues')
             connected_crossroads = self.agent.get('connected_crossroads')
+            state_schema = self.agent.get('state_scheme')
 
-            # TODO: better logic of choosing car to move, maybe 2 at the time, or random queue?
-            car_to_move = None
-            if lights_state == LightState.NS:
-                if line_queues[Direction.N]:
-                    car_to_move = line_queues[Direction.N].popleft()
-                if line_queues[Direction.S] and not car_to_move:
-                    car_to_move = line_queues[Direction.S].popleft()
-
-            if lights_state == LightState.EW:
-                if line_queues[Direction.E]:
-                    car_to_move = line_queues[Direction.E].popleft()
-                if line_queues[Direction.W] and not car_to_move:
-                    car_to_move = line_queues[Direction.W].popleft()
-
-            if car_to_move:
-                direction = car_to_move.path[0]
-                print(
-                    f'MOVECAR: {self.agent.jid}: sending car {car_to_move} to {connected_crossroads[direction]}')
-                await asyncio.sleep(1)
-                await self.send(MoveCarMessage(
-                    to=connected_crossroads[direction],
-                    car=car_to_move
-                ))
-
+            # letting one car from each queue at a time
+            for queue, allowed_directions in state_schema.items():
+                print(f'{self.agent.jid} trying to move cars from {queue} in {allowed_directions=}')
+                if line_queues[queue]:
+                    car_to_move = line_queues[queue].popleft()
+                    if car_to_move.path[0] in allowed_directions:
+                        print(
+                            f'MOVECAR: {self.agent.jid}: sending car {car_to_move} to {connected_crossroads[car_to_move.path[0]]}')
+                        await self.send(MoveCarMessage(
+                            to=connected_crossroads[car_to_move.path[0]],
+                            car=car_to_move
+                        ))
+                    else:
+                        line_queues[queue].appendleft(car_to_move)
             self.agent.set('line_queues', line_queues)
 
     class SimpleLightsState(State):
-        def __init__(self, current_state, default_next_state, timeout=30):
+        def __init__(self, current_state, default_next_state, state_scheme, timeout=30):
             self.current_state = current_state
             self.default_next_state = default_next_state
             self.timeout = timeout
+            self.state_scheme = state_scheme
             super().__init__()
 
-        async def run(self):
+        async def on_start(self) -> None:
             print(f'{self.agent.jid} changed state to {self.current_state}')
             self.agent.set('lights_state', self.current_state)
+            self.agent.set('state_scheme', self.state_scheme)
+
+        async def run(self):
             while msg := await self.receive(timeout=self.timeout):
                 recommended_state = json.loads(msg.body)['state']
                 if recommended_state != self.current_state:
@@ -117,24 +113,6 @@ class CrossroadHandler(Agent):
                     break
             else:
                 self.set_next_state(self.default_next_state)
-
-    # class AllQueueStates(CyclicBehaviour):
-    #     async def run(self):
-    #         print("RecvBehav running")
-    #
-    #         msg = await self.receive(10)  # wait for a message for 10 seconds
-    #         if msg:
-    #             print("Message received with content: {}".format(msg.body))
-    #             if self.agent.get("light_state") == LightState.NS:
-    #                 self.agent.set("light_state", LightState.EW)
-    #             else:
-    #                 self.agent.set("light_state", LightState.NS)
-    #         else:
-    #             print("Did not received any message after 10 seconds")
-    #         return
-
-    # class UpdateLight(CyclicBehaviour):
-    #     ...
 
     class ProcessArrivingCars(CyclicBehaviour):
         @staticmethod
@@ -175,6 +153,7 @@ class CrossroadHandler(Agent):
     async def setup(self):
         self.set("crossroad_id", self.crossroad_id)
         self.set("lights_state", self.lights_state)
+        self.set("state_scheme", self.state_scheme)
         self.set("line_queues", self.line_queues)
         self.set("connected_crossroads", self.connected_crossroads)
         self.set("update_status_time", self.update_status_time)
@@ -186,7 +165,7 @@ class CrossroadHandler(Agent):
 
         print('Created Aggregator agent: ', self._aggregator_jid)
 
-        move_cars = self.MoveCars(period=0.5)
+        move_cars = self.MoveCars(period=2)
         self.add_behaviour(move_cars)
 
         process_arriving_cars = self.ProcessArrivingCars()
@@ -196,10 +175,22 @@ class CrossroadHandler(Agent):
         self.add_behaviour(send_waiting_info)
 
         process_state_info = FSMBehaviour()
-        ns_state = self.SimpleLightsState(current_state=LightState.NS, default_next_state=LightState.EW)
-        process_state_info.add_state(name=LightState.NS, state=ns_state, initial=True)
-        ew_state = self.SimpleLightsState(current_state=LightState.EW, default_next_state=LightState.NS)
-        process_state_info.add_state(name=LightState.EW, state=ew_state)
+        ns_state = self.SimpleLightsState(
+            current_state=LightState.NS,
+            default_next_state=LightState.EW,
+            state_scheme={
+                Direction.N: {Direction.S, Direction.E, Direction.W},
+                Direction.S: {Direction.N, Direction.E, Direction.W},
+            })
+        process_state_info.add_state(name=LightState.NS, state=ns_state)
+        ew_state = self.SimpleLightsState(
+            current_state=LightState.EW,
+            default_next_state=LightState.NS,
+            state_scheme={
+                Direction.E: {Direction.W, Direction.N, Direction.S},
+                Direction.W: {Direction.E, Direction.N, Direction.S},
+            })
+        process_state_info.add_state(name=LightState.EW, state=ew_state, initial=True)
         process_state_info.add_transition(source=LightState.NS, dest=LightState.EW)
         process_state_info.add_transition(source=LightState.EW, dest=LightState.NS)
         self.add_behaviour(process_state_info, StateRecommendationTemplate())
