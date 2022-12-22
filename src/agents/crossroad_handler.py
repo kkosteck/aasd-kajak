@@ -75,19 +75,20 @@ class CrossroadHandler(Agent):
             state_schema = self.agent.get('state_scheme')
 
             # letting one car from each queue at a time
-            for queue, allowed_directions in state_schema.items():
-                print(f'{self.agent.jid} trying to move cars from {queue} in {allowed_directions=}')
-                if line_queues[queue]:
-                    car_to_move = line_queues[queue].popleft()
-                    if car_to_move.path[0] in allowed_directions:
-                        print(
-                            f'MOVECAR: {self.agent.jid}: sending car {car_to_move} to {connected_crossroads[car_to_move.path[0]]}')
-                        await self.send(MoveCarMessage(
-                            to=connected_crossroads[car_to_move.path[0]],
-                            car=car_to_move
-                        ))
-                    else:
-                        line_queues[queue].appendleft(car_to_move)
+            for queue_direction, allowed_directions in state_schema.items():
+                # print(f'{self.agent.jid} trying to move cars from {queue} in {allowed_directions=}')
+                if line_queues[queue_direction]:
+                    car_to_move = line_queues[queue_direction][0]
+                    if car_to_move.path:
+                        direction = car_to_move.path[0]
+                        if direction in allowed_directions:
+                            car_to_move = line_queues[queue_direction].popleft()
+                            print(
+                                f'MOVECAR: {self.agent.jid}: sending car {car_to_move} to {connected_crossroads[direction]}')
+                            await self.send(MoveCarMessage(
+                                to=connected_crossroads[direction],
+                                car=car_to_move
+                            ))
             self.agent.set('line_queues', line_queues)
 
     class SimpleLightsState(State):
