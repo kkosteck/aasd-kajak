@@ -36,7 +36,7 @@ class LoadGenerator(Agent):
 
         def generate_car(self) -> Car:
             # path = [Direction.NONE, random.choice(Direction.as_list())]
-            path = [Direction.NONE, Direction.E, Direction.E]
+            path = [Direction.E, Direction.E]
             self.generated_cars += 1
             return Car(
                 id=self.generated_cars,

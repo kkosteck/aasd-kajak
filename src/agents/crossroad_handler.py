@@ -68,8 +68,7 @@ class CrossroadHandler(Agent):
             """
             Move one car from open queue, one at the time
             """
-            self.print_queue_state()
-            # lights_state = self.agent.get('lights_state')
+            # self.print_queue_state()
             line_queues = self.agent.get('line_queues')
             connected_crossroads = self.agent.get('connected_crossroads')
             state_schema = self.agent.get('state_scheme')
@@ -78,17 +77,16 @@ class CrossroadHandler(Agent):
             for queue_direction, allowed_directions in state_schema.items():
                 # print(f'{self.agent.jid} trying to move cars from {queue} in {allowed_directions=}')
                 if line_queues[queue_direction]:
-                    car_to_move = line_queues[queue_direction][0]
-                    if car_to_move.path:
-                        direction = car_to_move.path[0]
-                        if direction in allowed_directions:
-                            car_to_move = line_queues[queue_direction].popleft()
-                            print(
-                                f'MOVECAR: {self.agent.jid}: sending car {car_to_move} to {connected_crossroads[direction]}')
-                            await self.send(MoveCarMessage(
-                                to=connected_crossroads[direction],
-                                car=car_to_move
-                            ))
+                    first_car_in_queue = line_queues[queue_direction][0]
+                    if first_car_in_queue.direction in allowed_directions:
+                        car_to_move = line_queues[queue_direction].popleft()
+                        direction = car_to_move.path.pop(0)
+                        print(
+                            f'MOVECAR: {self.agent.jid}: sending car {car_to_move} to {connected_crossroads[direction]}')
+                        await self.send(MoveCarMessage(
+                            to=connected_crossroads[direction],
+                            car=car_to_move
+                        ))
             self.agent.set('line_queues', line_queues)
 
     class SimpleLightsState(State):
@@ -116,22 +114,15 @@ class CrossroadHandler(Agent):
                 self.set_next_state(self.default_next_state)
 
     class ProcessArrivingCars(CyclicBehaviour):
-        @staticmethod
-        def process_car(car: Car) -> Tuple[Car, str]:
-            if len(car.path) == 0:
-                return car, Direction.NONE
-            next_direction = car.path.pop(0)
-            if next_direction == Direction.NONE:
-                return car, car.starting_queue_direction
-
-            return car, Direction.reverse(next_direction)
-
         async def run(self):
-            msg = await self.receive(10)
-            if msg:
-                car, direction = self.process_car(Car.from_json(msg.body))
+            if msg := await self.receive(10):
+                car = Car.from_json(msg.body)
                 print(f'MOVECAR: {self.agent.jid}: received car {car} from {msg.sender}')
-
+                reversed_connected_crossroads = self.agent.get('reversed_connected_crossroads')
+                if msg.sender in reversed_connected_crossroads:
+                    direction = reversed_connected_crossroads[msg.sender]
+                else:
+                    direction = car.starting_queue_direction
                 selected_queue_line = self.agent.get('line_queues')
                 selected_queue_line[direction].append(car)
                 self.agent.set("line_queues", selected_queue_line)
@@ -157,6 +148,7 @@ class CrossroadHandler(Agent):
         self.set("state_scheme", self.state_scheme)
         self.set("line_queues", self.line_queues)
         self.set("connected_crossroads", self.connected_crossroads)
+        self.set("reversed_connected_crossroads", dict((reversed(item) for item in self.connected_crossroads.items())))
         self.set("update_status_time", self.update_status_time)
         self.set("_aggregator_jid", self._aggregator_jid)
 
