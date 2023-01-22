@@ -1,21 +1,20 @@
 import random
-
-import networkx as nx
+from typing import Tuple
 import numpy as np
-import matplotlib.pyplot as plt
-
-from src.graphs.intersection import Intersection
+from src.agents.car_dispatcher import CarDispatcher
+from src.graphs.intersections_graph import simulation_graph
+from src.agents.crossroad_handler import CrossroadHandler
 
 
 class MapGenerator:
 
-    def __init__(self, inters_count=10, width=10, height=10):
-        self.inters_count = inters_count
-        self.intersections: dict[int, Intersection] = {}
+    def __init__(self, crossroads_count=7, width=3, height=3):
+        assert crossroads_count <= width * height
+        self.crossroads_count = crossroads_count
         self.width = width
         self.height = height
         self.grid = np.zeros([width, height], dtype=int)
-        self.graph = nx.MultiDiGraph()
+        self.graph = simulation_graph
 
     def _create_edges(self, axis):
         node_1 = None
@@ -30,31 +29,14 @@ class MapGenerator:
                 node_1 = node_2
                 continue
             else:
-                # lanes = random.randint(1, 2)
-                lanes = 2
-                for lane in range(1, lanes + 1):
-                    self.graph.add_edge(node_1, node_2, delay=random.randint(1, 10),
-                                        lane=lane, direction="EW" if axis else "NS")
-                # lanes = random.randint(1, 2)
-                for lane in range(1, lanes + 1):
-                    self.graph.add_edge(node_2, node_1, delay=random.randint(1, 10),
-                                        lane=lane, direction="WE" if axis else "SN")
+                self.graph.add_edge(node_1, node_2, value=0)
+                self.graph.add_edge(node_2, node_1, value=0)
                 node_1 = node_2
 
-    def _generate_intersections_graphs(self):
-        for node in self.graph.nodes(data=True):
-            in_edges = []
-            out_edges = []
-            for _, _, data in self.graph.in_edges(node[0], data=True):
-                in_edges.append(f"{data['direction'][1]}{data['lane']}_IN")
-            for _, _, data in self.graph.out_edges(node[0], data=True):
-                out_edges.append(f"{data['direction'][0]}{data['lane']}_OUT")
-            self.intersections[node[0]] = Intersection(node[0], in_edges, out_edges)
-
-    def generate(self):
+    def generate(self, jid_dispatcher="dispatcher@localhost") -> Tuple[CarDispatcher, list[CrossroadHandler]]:
         # position nodes on the grid
-        positions = sorted(random.sample(list(np.ndindex(self.grid.shape)), self.inters_count))
-        for idx, (x, y) in enumerate(positions, start=1):
+        crossroad_handlers = []
+        for idx, (x, y) in enumerate(list(np.ndindex(self.grid.shape))[:self.crossroads_count], start=1):
             self.grid[x, y] = idx
             self.graph.add_node(idx, x_cord=x, y_cord=y)
 
@@ -62,40 +44,17 @@ class MapGenerator:
         self._create_edges(1)
         # add vertical edges
         self._create_edges(0)
-        # generate intersection nested graphs
-        self._generate_intersections_graphs()
+        
+        for node in self.graph.nodes:
+            neighbors_jid = {}
+            for direction, node_id in self.graph.get_node_neighbors(node).items():
+                if node_id is None:
+                    neighbors_jid[f"{direction.lower()}_crossroad_jid"] = jid_dispatcher
+                else:
+                    neighbors_jid[f"{direction.lower()}_crossroad_jid"] = f"crossroad{node_id}@localhost"
+            crossroad_handlers.append(CrossroadHandler(f"crossroad{node}@localhost",
+                                                       "pwd", node, **neighbors_jid))
 
-    def step(self):  # simulate next traffix step
-        for idx, inter in self.intersections.items():
-            inter.step()
-            out_traffic = inter.get_out_traffic()
-            for neighbor, direction in self._get_intersection_neighbors(idx).items():
-                self.intersections[neighbor].insert_traffic(out_traffic[direction], direction)
+        dispatcher = CarDispatcher(jid_dispatcher, "pwd")
+        return dispatcher, crossroad_handlers
 
-    def _get_intersection_neighbors(self, idx):
-        neighbors = {}
-        for edge in self.graph.out_edges(idx, data=True):
-            neighbors[edge[1]] = edge[2]['direction'][0]
-        return neighbors
-
-    def visualize(self):
-        """
-        Visualize graph using matplotlib - only for debugging purposes
-        Something like PyGame should be used for the final version
-        """
-        pos = {node: (self.graph.nodes[node]["x_cord"] + 1, self.graph.nodes[node]["y_cord"] + 1)
-               for node in self.graph.nodes}
-
-        nx.draw_networkx_nodes(self.graph, pos)
-
-        for edge in self.graph.edges(data=True):
-            nx.draw_networkx_edges(self.graph, pos, edgelist=[(edge[0], edge[1])], style="dashed",
-                                   connectionstyle=f'arc3, rad = {edge[2]["lane"]*0.05}')
-
-        nx.draw_networkx_labels(self.graph, pos, font_family="sans-serif")
-
-        ax = plt.gca()
-        ax.margins(0.08)
-        plt.axis("off")
-        # plt.tight_layout()
-        plt.show()
