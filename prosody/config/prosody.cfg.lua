@@ -148,10 +148,10 @@ authentication = "internal_hashed"
 -- through modules. An "sql" backend is included by default, but requires
 -- additional dependencies. See https://prosody.im/doc/storage for more info.
 
- storage = "sql" -- Default is "internal"
+--  storage = "sql" -- Default is "internal"
 
 -- For the "sql" backend, you can uncomment *one* of the below to configure:
- sql = { driver = "SQLite3", database = "/data/prosody.sqlite" } -- Default. 'database' is the filename.
+--  sql = { driver = "SQLite3", database = "/data/prosody.sqlite" } -- Default. 'database' is the filename.
 --sql = { driver = "MySQL", database = "prosody", username = "prosody", password = "secret", host = "localhost" }
 --sql = { driver = "PostgreSQL", database = "prosody", username = "prosody", password = "secret", host = "localhost" }
 

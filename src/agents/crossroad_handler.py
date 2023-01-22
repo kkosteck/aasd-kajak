@@ -12,6 +12,7 @@ from src.communication.state_recommendation_protocol import StateRecommendationT
 from src.entity.LightState import LightState
 from src.entity.car import Car, Direction
 from src.agents.traffic_info_aggregator import TrafficInfoAggregator
+from src.graphs.intersections_graph import simulation_graph
 
 
 class CrossroadHandler(Agent):
@@ -126,6 +127,12 @@ class CrossroadHandler(Agent):
                 selected_queue_line = self.agent.get('line_queues')
                 selected_queue_line[direction].append(car)
                 self.agent.set("line_queues", selected_queue_line)
+
+                # update simulation graph
+                simulation_graph.update_intersection(
+                    node_id=self.agent.get('crossroad_id'),
+                    values={key: len(value) for key, value in selected_queue_line.items()}
+                )
 
     class SendWaitingInfo(CyclicBehaviour):
         async def run(self):

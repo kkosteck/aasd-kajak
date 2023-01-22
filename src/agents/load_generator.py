@@ -55,7 +55,7 @@ class LoadGenerator(Agent):
 
         async def run(self):
             print('sent car')
-            await self.send(MoveCarMessage(to="crossroad00@localhost", car=self.generate_car()))
+            await self.send(MoveCarMessage(to="crossroad1@localhost", car=self.generate_car()))
             await asyncio.sleep(self.frequency[self.sample])
             self.sample = (self.sample + 1) % len(self.frequency)
             print(self.sample)

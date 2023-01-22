@@ -2,3 +2,4 @@ matplotlib==3.6.2
 spade==3.2.2
 networkx==2.8.8
 numpy==1.23.5
+netgraph==4.11.7
