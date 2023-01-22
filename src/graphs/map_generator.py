@@ -8,7 +8,7 @@ from src.agents.crossroad_handler import CrossroadHandler
 
 class MapGenerator:
 
-    def __init__(self, crossroads_count=7, width=3, height=3):
+    def __init__(self, crossroads_count, width, height):
         assert crossroads_count <= width * height
         self.crossroads_count = crossroads_count
         self.width = width

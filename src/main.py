@@ -5,7 +5,7 @@ from src.graphs.map_generator import MapGenerator
 
 
 def main():
-    map_generator = MapGenerator()
+    map_generator = MapGenerator(crossroads_count=7, width=3, height=3)
     dispatcher, crossroads = map_generator.generate()
     map_generator.graph.visualize()
     for crossroad in crossroads:
