@@ -1,6 +1,9 @@
-prosody:
-  build: "./prosody"
-  ports:
-    - "5222:5222"
-  volumes:
-    - "./prosody/data:/data"
+version: "3"
+
+services:
+  prosody:
+    build: "./prosody"
+    ports:
+      - "5222:5222"
+    volumes:
+      - "./prosody/data:/data"
