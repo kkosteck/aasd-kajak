@@ -6,7 +6,7 @@ from spade.behaviour import CyclicBehaviour
 
 from src.communication.crossroads_info_protocol import CrossroadsInfoTemplate
 from src.communication.state_recommendation_protocol import StateRecommendationMessage
-from src.entity.algorithms import SimpleAlgorithm
+from src.entity.algorithms import LargestFirst, WeightedSum, AverageWait
 
 
 class TrafficInfoAggregator(Agent):
@@ -14,7 +14,6 @@ class TrafficInfoAggregator(Agent):
     Agent requesting number of awaiting cars from WaitingHandler.
     Based on number of awaiting cars, chooses state of the traffic lights and sends change request to Crossroad
     """
-    algorithm = SimpleAlgorithm(timeout=10)
 
     class AggregateLines(CyclicBehaviour):
         sent_messages: int
@@ -55,18 +54,12 @@ class TrafficInfoAggregator(Agent):
                     state=recommended_state
                 ))
 
-
-
-
     async def setup(self):
         print("TrafficInfoAggregator started")
-        self.set('algorithm', self.algorithm)
-
-        # aggregate_lines = self.AggregateLines()
-        # self.add_behaviour(aggregate_lines, ResponseCountCarsTemplate())
+        # self.set('algorithm', LargestFirst(timeout=10))
+        self.set('algorithm', AverageWait(timeout=10))
+        # self.set('algorithm', WeightedSum(timeout=10))
 
         process_crossroads_info = self.ProcessCrossroadsInfo()
         self.add_behaviour(process_crossroads_info, CrossroadsInfoTemplate())
 
-        # alive = self.Alive()
-        # self.add_behaviour(alive)
