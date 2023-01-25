@@ -100,6 +100,7 @@ class CrossroadHandler(Agent):
 
         async def on_start(self) -> None:
             print(f'{self.agent.jid} changed state to {self.current_state}')
+            simulation_graph.update_intersection_state(self.agent.get("crossroad_id"), self.current_state)
             self.agent.set('lights_state', self.current_state)
             self.agent.set('state_scheme', self.state_scheme)
 

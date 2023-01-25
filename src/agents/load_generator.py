@@ -35,13 +35,13 @@ class LoadGenerator(Agent):
         frequency: np.ndarray
 
         def generate_car(self) -> Car:
-            # path = [Direction.NONE, random.choice(Direction.as_list())]
-            path = [Direction.E, Direction.E]
+            path = [random.choice(Direction.as_list()) for _ in range(10)]
+            # path = [Direction.E, Direction.E]
             self.generated_cars += 1
             return Car(
                 id=self.generated_cars,
                 starting_crossroad_id=1,
-                starting_queue_direction=Direction.W,  # random.choice(Direction.as_list()),
+                starting_queue_direction=random.choice(Direction.as_list()),
                 create_timestamp=time.time(),
                 path=path
             )
@@ -55,7 +55,9 @@ class LoadGenerator(Agent):
 
         async def run(self):
             print('sent car')
-            await self.send(MoveCarMessage(to="crossroad1@localhost", car=self.generate_car()))
+            available_crossroads_ids = self.get("available_crossroads_ids")
+            crossroad_id = random.choice(available_crossroads_ids)
+            await self.send(MoveCarMessage(to=f"crossroad{crossroad_id}@localhost", car=self.generate_car()))
             await asyncio.sleep(self.frequency[self.sample])
             self.sample = (self.sample + 1) % len(self.frequency)
             print(self.sample)

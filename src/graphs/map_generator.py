@@ -38,7 +38,7 @@ class MapGenerator:
         crossroad_handlers = []
         for idx, (x, y) in enumerate(list(np.ndindex(self.grid.shape))[:self.crossroads_count], start=1):
             self.grid[x, y] = idx
-            self.graph.add_node(idx, x_cord=x, y_cord=y)
+            self.graph.add_node(idx, x_cord=x, y_cord=y, state="")
 
         # add horizontal edges
         self._create_edges(1)

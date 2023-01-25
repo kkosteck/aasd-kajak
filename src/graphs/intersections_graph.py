@@ -14,6 +14,10 @@ class IntersectionsGraph(nx.DiGraph):
             nx.set_edge_attributes(self, {(neighbors[direction], node_id): {"value": value}})
         self.visualize()
 
+    def update_intersection_state(self, node_id: str, state: str):
+        nx.set_node_attributes(self, {node_id: {"state": state}})
+        self.visualize()
+
     def get_node_neighbors(self, node):
         x = self.nodes[node]['x_cord']
         y = self.nodes[node]['y_cord']
@@ -33,17 +37,19 @@ class IntersectionsGraph(nx.DiGraph):
         return neighbors
 
     def visualize(self):
+        plt.clf()
         scale_x = max(nx.get_node_attributes(self, 'x_cord').values()) + 1
         scale_y = max(nx.get_node_attributes(self, 'y_cord').values()) + 1
         pos = {node: np.array((self.nodes[node]["x_cord"] + 1, self.nodes[node]["y_cord"] + 1))
                for node in self.nodes}
+        node_labels = {node: self.nodes[node]["state"] for node in self.nodes}
 
         Graph(
             self,
             scale=(scale_x + 1, scale_y + 1),
             node_layout=pos,
             node_color="lightblue",
-            node_labels=True,
+            node_labels=node_labels,
             node_size=10,
             node_label_fontdict=dict(size=8),
             edge_layout='curved',

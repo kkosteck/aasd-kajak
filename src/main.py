@@ -5,13 +5,13 @@ from src.graphs.map_generator import MapGenerator
 
 
 def main():
-    map_generator = MapGenerator(crossroads_count=7, width=3, height=3)
+    map_generator = MapGenerator(crossroads_count=9, width=3, height=3)
     dispatcher, crossroads = map_generator.generate()
     map_generator.graph.visualize()
     for crossroad in crossroads:
         crossroad.start().result()
     dispatcher.start().result()
-    load_generator = LoadGenerator("load_generator@localhost", "pwd", 1, 5, [crossroad.crossroad_id for crossroad in crossroads])
+    load_generator = LoadGenerator("load_generator1@localhost", "pwd", 1, 2, [crossroad.crossroad_id for crossroad in crossroads])
     load_generator.start().result()
 
     while load_generator.is_alive():
