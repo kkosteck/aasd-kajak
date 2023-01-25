@@ -1,6 +1,7 @@
 import time
 from abc import ABC, abstractmethod
 import threading
+import time
 
 from src.agents.crossroad_handler import LightState
 
@@ -42,7 +43,7 @@ class Algorithm(ABC):
         self._state_timers[state].start()
 
 
-class SimpleAlgorithm(Algorithm):
+class LargestFirst(Algorithm):
     def _process_data(self, lines, current_state):
         if self._high_priority_states:
             return self._high_priority_states[0]
@@ -52,16 +53,43 @@ class SimpleAlgorithm(Algorithm):
             return LightState.EW
 
 
-# if __name__ == '__main__':
-#     lines = {'N': [], 'S': [], 'W': [], 'E': []}
-#     current_state = 'NS'
-#     sa = SimpleAlgorithm(timeout=10)
-#     print(sa._high_priority_states)
-#     time.sleep(5)
-#     print(f'recommended: {sa.recommend_state(lines=lines)}')
-#     print(sa._high_priority_states)
-#     time.sleep(5)
-#     print(sa._high_priority_states)
-#     time.sleep(5)
-#     print(f'recommended: {sa.recommend_state(lines=lines)}')
-#     print(sa._high_priority_states)
+class AverageWait(Algorithm):
+    def _process_data(self, lines, current_state):
+        if self._high_priority_states:
+            return self._high_priority_states[0]
+
+        current_ts = time.time()
+        wait_dict = {}
+        for line, cars in lines.items():
+            if not cars:
+                wait_dict[line] = 0
+            else:
+                wait_dict[line] = sum([current_ts - car['create_timestamp'] for car in cars]) / len(cars)
+
+        if ((wait_dict['N'] + wait_dict['S'])/2) >= ((wait_dict['W'] + wait_dict['E'])/2):
+            return LightState.NS
+        else:
+            return LightState.EW
+
+
+class WeightedSum(Algorithm):
+    def _process_data(self, lines, current_state):
+        if self._high_priority_states:
+            return self._high_priority_states[0]
+
+        current_ts = time.time()
+        wait_dict = {}
+        for line, cars in lines.items():
+            if not cars:
+                wait_dict[line] = 0
+            else:
+                wait_dict[line] = sum([current_ts - car['create_timestamp'] for car in cars]) / len(cars)
+
+        if (wait_dict['N']*len(lines['N']) + wait_dict['S']*len(lines['S'])) >= \
+                (wait_dict['W']*len(lines['W']) + wait_dict['E']*len(lines['E'])):
+            return LightState.NS
+        else:
+            return LightState.EW
+
+
+
